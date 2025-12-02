@@ -2,18 +2,43 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 export default function SignIn() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { signIn } = useAuth()
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle sign in logic here
-    console.log('Sign in:', { email, password, rememberMe })
+    setError('')
+    setIsLoading(true)
+
+    try {
+      const success = await signIn(email, password)
+      if (success) {
+        router.push('/dashboard')
+      } else {
+        setError('Invalid email or password. Try the demo credentials below.')
+      }
+    } catch {
+      setError('An error occurred. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fillDemoCredentials = () => {
+    setEmail('demo@revitalizedhealth.com')
+    setPassword('demo123')
   }
 
   return (
@@ -36,7 +61,33 @@ export default function SignIn() {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        {/* Demo credentials banner */}
+        <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
+          <p className="text-sm text-blue-700">
+            Email: <code className="bg-blue-100 px-1 rounded">demo@revitalizedhealth.com</code>
+          </p>
+          <p className="text-sm text-blue-700">
+            Password: <code className="bg-blue-100 px-1 rounded">demo123</code>
+          </p>
+          <button
+            type="button"
+            onClick={fillDemoCredentials}
+            className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium underline"
+          >
+            Click to auto-fill
+          </button>
+        </div>
+
         <div className="bg-white py-8 px-4 shadow-lg sm:rounded-xl sm:px-10">
+          {/* Error message */}
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Email field */}
             <div>
@@ -122,9 +173,17 @@ export default function SignIn() {
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition-colors"
+                disabled={isLoading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-secondary hover:bg-secondary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Sign In
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Signing in...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </button>
             </div>
           </form>
