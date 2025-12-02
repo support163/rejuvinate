@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -16,8 +16,23 @@ import {
   LogOut,
   ChevronRight,
   Bell,
-  Pill
+  Pill,
+  Upload,
+  File,
+  Trash2,
+  Eye,
+  X,
+  CheckCircle
 } from 'lucide-react'
+
+interface MedicalRecord {
+  id: string
+  name: string
+  type: string
+  size: string
+  uploadedAt: string
+  category: string
+}
 
 // Mock health data
 const healthMetrics = {
@@ -43,15 +58,86 @@ const recentMessages = [
   { id: 2, from: 'Billing Dept', subject: 'Invoice Available', date: '5 days ago', unread: false },
 ]
 
+// Initial mock medical records
+const initialMedicalRecords: MedicalRecord[] = [
+  { id: '1', name: 'Blood_Panel_Oct_2025.pdf', type: 'application/pdf', size: '245 KB', uploadedAt: 'Oct 15, 2025', category: 'Blood Labs' },
+  { id: '2', name: 'Hormone_Panel_Sep_2025.pdf', type: 'application/pdf', size: '189 KB', uploadedAt: 'Sep 22, 2025', category: 'Blood Labs' },
+]
+
 export default function Dashboard() {
   const { user, isLoading, signOut } = useAuth()
   const router = useRouter()
+  const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>(initialMedicalRecords)
+  const [isDragging, setIsDragging] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/signin')
     }
   }, [user, isLoading, router])
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const files = Array.from(e.dataTransfer.files)
+    handleFiles(files)
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files)
+      handleFiles(files)
+    }
+  }
+
+  const handleFiles = (files: File[]) => {
+    const pdfFiles = files.filter(file => file.type === 'application/pdf')
+
+    if (pdfFiles.length === 0) {
+      alert('Please upload PDF files only')
+      return
+    }
+
+    const newRecords: MedicalRecord[] = pdfFiles.map(file => ({
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      name: file.name,
+      type: file.type,
+      size: formatFileSize(file.size),
+      uploadedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      category: 'Blood Labs'
+    }))
+
+    setMedicalRecords(prev => [...newRecords, ...prev])
+    setUploadSuccess(true)
+    setTimeout(() => setUploadSuccess(false), 3000)
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B'
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB'
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  }
+
+  const deleteRecord = (id: string) => {
+    setMedicalRecords(prev => prev.filter(record => record.id !== id))
+  }
 
   if (isLoading) {
     return (
@@ -226,6 +312,102 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Medical Records Section */}
+        <div className="mt-8 bg-white rounded-xl shadow-md p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-primary flex items-center gap-2">
+              <FileText className="w-6 h-6 text-secondary" />
+              Medical Records
+            </h2>
+            <span className="text-sm text-gray-500">{medicalRecords.length} files</span>
+          </div>
+
+          {/* Upload Success Message */}
+          {uploadSuccess && (
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+              <CheckCircle className="w-5 h-5 text-green-500" />
+              <p className="text-sm text-green-700">File uploaded successfully!</p>
+            </div>
+          )}
+
+          {/* Upload Area */}
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+              isDragging
+                ? 'border-secondary bg-secondary/5'
+                : 'border-gray-300 hover:border-secondary/50'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-upload"
+            />
+            <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-secondary' : 'text-gray-400'}`} />
+            <p className="text-gray-600 mb-2">
+              <span className="font-semibold">Drag and drop</span> your blood lab PDFs here
+            </p>
+            <p className="text-sm text-gray-500 mb-4">or</p>
+            <label
+              htmlFor="file-upload"
+              className="inline-flex items-center gap-2 bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-6 rounded-lg cursor-pointer transition-colors"
+            >
+              <Upload className="w-4 h-4" />
+              Browse Files
+            </label>
+            <p className="text-xs text-gray-400 mt-4">Supported format: PDF (Max 10MB)</p>
+          </div>
+
+          {/* Uploaded Files List */}
+          {medicalRecords.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Uploaded Records</h3>
+              <div className="space-y-3">
+                {medicalRecords.map((record) => (
+                  <div
+                    key={record.id}
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                        <File className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{record.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {record.size} • {record.uploadedAt} • {record.category}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        className="p-2 text-gray-500 hover:text-secondary hover:bg-white rounded-lg transition-colors"
+                        title="View"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteRecord(record.id)}
+                        className="p-2 text-gray-500 hover:text-red-500 hover:bg-white rounded-lg transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Health Tip Banner */}
