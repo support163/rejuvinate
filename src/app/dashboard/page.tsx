@@ -34,6 +34,119 @@ interface MedicalRecord {
   category: string
 }
 
+interface HistoricalDataPoint {
+  date: string
+  value: number
+}
+
+interface MetricHistoryData {
+  title: string
+  unit: string
+  normalRange: { min: number; max: number }
+  data: HistoricalDataPoint[]
+  color: string
+}
+
+// Historical data for each metric
+const historicalData: Record<string, MetricHistoryData> = {
+  testosterone: {
+    title: 'Testosterone',
+    unit: 'ng/dL',
+    normalRange: { min: 300, max: 1000 },
+    color: '#3b82f6',
+    data: [
+      { date: 'Jan 2022', value: 285 },
+      { date: 'Apr 2022', value: 320 },
+      { date: 'Jul 2022', value: 445 },
+      { date: 'Oct 2022', value: 512 },
+      { date: 'Jan 2023', value: 548 },
+      { date: 'Apr 2023', value: 590 },
+      { date: 'Jul 2023', value: 625 },
+      { date: 'Oct 2023', value: 610 },
+      { date: 'Jan 2024', value: 658 },
+      { date: 'Apr 2024', value: 672 },
+      { date: 'Jul 2024', value: 695 },
+      { date: 'Oct 2024', value: 678 },
+      { date: 'Jan 2025', value: 702 },
+      { date: 'Apr 2025', value: 690 },
+      { date: 'Jul 2025', value: 685 },
+      { date: 'Oct 2025', value: 685 },
+    ]
+  },
+  estrogen: {
+    title: 'Estrogen',
+    unit: 'pg/mL',
+    normalRange: { min: 10, max: 40 },
+    color: '#ec4899',
+    data: [
+      { date: 'Jan 2022', value: 45 },
+      { date: 'Apr 2022', value: 42 },
+      { date: 'Jul 2022', value: 38 },
+      { date: 'Oct 2022', value: 35 },
+      { date: 'Jan 2023', value: 32 },
+      { date: 'Apr 2023', value: 30 },
+      { date: 'Jul 2023', value: 28 },
+      { date: 'Oct 2023', value: 29 },
+      { date: 'Jan 2024', value: 27 },
+      { date: 'Apr 2024', value: 26 },
+      { date: 'Jul 2024', value: 28 },
+      { date: 'Oct 2024', value: 27 },
+      { date: 'Jan 2025', value: 29 },
+      { date: 'Apr 2025', value: 28 },
+      { date: 'Jul 2025', value: 27 },
+      { date: 'Oct 2025', value: 28 },
+    ]
+  },
+  thyroid: {
+    title: 'Thyroid (TSH)',
+    unit: 'mIU/L',
+    normalRange: { min: 0.4, max: 4.0 },
+    color: '#ef4444',
+    data: [
+      { date: 'Jan 2022', value: 4.8 },
+      { date: 'Apr 2022', value: 4.2 },
+      { date: 'Jul 2022', value: 3.8 },
+      { date: 'Oct 2022', value: 3.5 },
+      { date: 'Jan 2023', value: 3.2 },
+      { date: 'Apr 2023', value: 2.9 },
+      { date: 'Jul 2023', value: 2.7 },
+      { date: 'Oct 2023', value: 2.5 },
+      { date: 'Jan 2024', value: 2.4 },
+      { date: 'Apr 2024', value: 2.3 },
+      { date: 'Jul 2024', value: 2.2 },
+      { date: 'Oct 2024', value: 2.1 },
+      { date: 'Jan 2025', value: 2.2 },
+      { date: 'Apr 2025', value: 2.1 },
+      { date: 'Jul 2025', value: 2.0 },
+      { date: 'Oct 2025', value: 2.1 },
+    ]
+  },
+  vitaminD: {
+    title: 'Vitamin D',
+    unit: 'ng/mL',
+    normalRange: { min: 30, max: 100 },
+    color: '#eab308',
+    data: [
+      { date: 'Jan 2022', value: 18 },
+      { date: 'Apr 2022', value: 22 },
+      { date: 'Jul 2022', value: 28 },
+      { date: 'Oct 2022', value: 32 },
+      { date: 'Jan 2023', value: 30 },
+      { date: 'Apr 2023', value: 35 },
+      { date: 'Jul 2023', value: 42 },
+      { date: 'Oct 2023', value: 38 },
+      { date: 'Jan 2024', value: 36 },
+      { date: 'Apr 2024', value: 40 },
+      { date: 'Jul 2024', value: 48 },
+      { date: 'Oct 2024', value: 44 },
+      { date: 'Jan 2025', value: 42 },
+      { date: 'Apr 2025', value: 46 },
+      { date: 'Jul 2025', value: 50 },
+      { date: 'Oct 2025', value: 45 },
+    ]
+  }
+}
+
 // Mock health data
 const healthMetrics = {
   testosterone: { value: 685, unit: 'ng/dL', status: 'normal', change: '+12%' },
@@ -70,6 +183,7 @@ export default function Dashboard() {
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>(initialMedicalRecords)
   const [isDragging, setIsDragging] = useState(false)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -189,6 +303,7 @@ export default function Dashboard() {
             change={healthMetrics.testosterone.change}
             icon={<Activity className="w-6 h-6" />}
             color="blue"
+            onClick={() => setSelectedMetric('testosterone')}
           />
           <MetricCard
             title="Estrogen"
@@ -197,6 +312,7 @@ export default function Dashboard() {
             change={healthMetrics.estrogen.change}
             icon={<Droplets className="w-6 h-6" />}
             color="pink"
+            onClick={() => setSelectedMetric('estrogen')}
           />
           <MetricCard
             title="Thyroid (TSH)"
@@ -205,6 +321,7 @@ export default function Dashboard() {
             change={healthMetrics.thyroid.change}
             icon={<Heart className="w-6 h-6" />}
             color="red"
+            onClick={() => setSelectedMetric('thyroid')}
           />
           <MetricCard
             title="Vitamin D"
@@ -213,8 +330,17 @@ export default function Dashboard() {
             change={healthMetrics.vitaminD.change}
             icon={<TrendingUp className="w-6 h-6" />}
             color="yellow"
+            onClick={() => setSelectedMetric('vitaminD')}
           />
         </div>
+
+        {/* Historical Data Modal */}
+        {selectedMetric && (
+          <HistoryModal
+            metricData={historicalData[selectedMetric]}
+            onClose={() => setSelectedMetric(null)}
+          />
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -440,7 +566,8 @@ function MetricCard({
   unit,
   change,
   icon,
-  color
+  color,
+  onClick
 }: {
   title: string
   value: number
@@ -448,6 +575,7 @@ function MetricCard({
   change: string
   icon: React.ReactNode
   color: 'blue' | 'pink' | 'red' | 'yellow'
+  onClick: () => void
 }) {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600',
@@ -459,7 +587,10 @@ function MetricCard({
   const isPositive = change.startsWith('+')
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
+    <div
+      onClick={onClick}
+      className="bg-white rounded-xl shadow-md p-6 cursor-pointer hover:shadow-lg hover:scale-[1.02] transition-all duration-200 border-2 border-transparent hover:border-secondary/30"
+    >
       <div className="flex items-center justify-between mb-4">
         <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
           {icon}
@@ -473,10 +604,273 @@ function MetricCard({
         <span className="text-2xl font-bold text-gray-900">{value}</span>
         <span className="text-sm text-gray-500">{unit}</span>
       </div>
-      <div className="mt-2">
+      <div className="mt-2 flex items-center justify-between">
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
           Normal Range
         </span>
+        <span className="text-xs text-secondary font-medium">View History →</span>
+      </div>
+    </div>
+  )
+}
+
+function HistoryModal({
+  metricData,
+  onClose
+}: {
+  metricData: MetricHistoryData
+  onClose: () => void
+}) {
+  const { data, title, unit, normalRange, color } = metricData
+
+  // Calculate chart dimensions
+  const chartHeight = 300
+  const chartWidth = 800
+  const padding = { top: 40, right: 40, bottom: 60, left: 60 }
+  const graphWidth = chartWidth - padding.left - padding.right
+  const graphHeight = chartHeight - padding.top - padding.bottom
+
+  // Calculate min/max for scaling
+  const values = data.map(d => d.value)
+  const minValue = Math.min(...values, normalRange.min) * 0.9
+  const maxValue = Math.max(...values, normalRange.max) * 1.1
+
+  // Scale functions
+  const xScale = (index: number) => padding.left + (index / (data.length - 1)) * graphWidth
+  const yScale = (value: number) => padding.top + graphHeight - ((value - minValue) / (maxValue - minValue)) * graphHeight
+
+  // Create path for line chart
+  const linePath = data.map((point, i) => {
+    const x = xScale(i)
+    const y = yScale(point.value)
+    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+  }).join(' ')
+
+  // Normal range band Y positions
+  const normalMinY = yScale(normalRange.min)
+  const normalMaxY = yScale(normalRange.max)
+
+  // Get first and last values for summary
+  const firstValue = data[0].value
+  const lastValue = data[data.length - 1].value
+  const totalChange = ((lastValue - firstValue) / firstValue * 100).toFixed(1)
+  const isImproved = (title === 'Estrogen' || title === 'Thyroid (TSH)')
+    ? lastValue < firstValue
+    : lastValue > firstValue
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+          <div>
+            <h2 className="text-2xl font-bold text-primary">{title} History</h2>
+            <p className="text-sm text-gray-500">Historical lab results over time</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-6 h-6 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-xs text-gray-500 mb-1">Current Level</p>
+              <p className="text-xl font-bold text-gray-900">{lastValue} <span className="text-sm font-normal text-gray-500">{unit}</span></p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-xs text-gray-500 mb-1">Starting Level</p>
+              <p className="text-xl font-bold text-gray-900">{firstValue} <span className="text-sm font-normal text-gray-500">{unit}</span></p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-xs text-gray-500 mb-1">Total Change</p>
+              <p className={`text-xl font-bold ${isImproved ? 'text-green-600' : 'text-red-500'}`}>
+                {Number(totalChange) > 0 ? '+' : ''}{totalChange}%
+              </p>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-xs text-gray-500 mb-1">Normal Range</p>
+              <p className="text-xl font-bold text-gray-900">{normalRange.min} - {normalRange.max}</p>
+            </div>
+          </div>
+
+          {/* Chart */}
+          <div className="bg-gray-50 rounded-xl p-4 overflow-x-auto">
+            <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full min-w-[600px]">
+              {/* Normal range band */}
+              <rect
+                x={padding.left}
+                y={normalMaxY}
+                width={graphWidth}
+                height={normalMinY - normalMaxY}
+                fill="#22c55e"
+                opacity="0.1"
+              />
+              <line
+                x1={padding.left}
+                x2={chartWidth - padding.right}
+                y1={normalMinY}
+                y2={normalMinY}
+                stroke="#22c55e"
+                strokeWidth="1"
+                strokeDasharray="4 4"
+              />
+              <line
+                x1={padding.left}
+                x2={chartWidth - padding.right}
+                y1={normalMaxY}
+                y2={normalMaxY}
+                stroke="#22c55e"
+                strokeWidth="1"
+                strokeDasharray="4 4"
+              />
+
+              {/* Y-axis */}
+              <line
+                x1={padding.left}
+                x2={padding.left}
+                y1={padding.top}
+                y2={chartHeight - padding.bottom}
+                stroke="#e5e7eb"
+                strokeWidth="1"
+              />
+
+              {/* X-axis */}
+              <line
+                x1={padding.left}
+                x2={chartWidth - padding.right}
+                y1={chartHeight - padding.bottom}
+                y2={chartHeight - padding.bottom}
+                stroke="#e5e7eb"
+                strokeWidth="1"
+              />
+
+              {/* Y-axis labels */}
+              {[0, 0.25, 0.5, 0.75, 1].map((percent, i) => {
+                const value = minValue + (maxValue - minValue) * (1 - percent)
+                const y = padding.top + graphHeight * percent
+                return (
+                  <g key={i}>
+                    <line
+                      x1={padding.left - 5}
+                      x2={padding.left}
+                      y1={y}
+                      y2={y}
+                      stroke="#9ca3af"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={padding.left - 10}
+                      y={y}
+                      textAnchor="end"
+                      dominantBaseline="middle"
+                      className="text-xs fill-gray-500"
+                    >
+                      {value.toFixed(title === 'Thyroid (TSH)' ? 1 : 0)}
+                    </text>
+                  </g>
+                )
+              })}
+
+              {/* X-axis labels */}
+              {data.filter((_, i) => i % 4 === 0 || i === data.length - 1).map((point, i, arr) => {
+                const originalIndex = data.indexOf(point)
+                const x = xScale(originalIndex)
+                return (
+                  <text
+                    key={i}
+                    x={x}
+                    y={chartHeight - padding.bottom + 20}
+                    textAnchor="middle"
+                    className="text-xs fill-gray-500"
+                  >
+                    {point.date}
+                  </text>
+                )
+              })}
+
+              {/* Line path */}
+              <path
+                d={linePath}
+                fill="none"
+                stroke={color}
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Data points */}
+              {data.map((point, i) => (
+                <g key={i}>
+                  <circle
+                    cx={xScale(i)}
+                    cy={yScale(point.value)}
+                    r="6"
+                    fill="white"
+                    stroke={color}
+                    strokeWidth="3"
+                    className="hover:r-8 transition-all cursor-pointer"
+                  />
+                  {/* Tooltip on hover would go here in a more complex implementation */}
+                </g>
+              ))}
+
+              {/* Legend */}
+              <g transform={`translate(${chartWidth - padding.right - 120}, ${padding.top - 20})`}>
+                <rect x="0" y="0" width="12" height="12" fill="#22c55e" opacity="0.3" />
+                <text x="18" y="10" className="text-xs fill-gray-600">Normal Range</text>
+              </g>
+            </svg>
+          </div>
+
+          {/* Data table */}
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">All Results</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 text-gray-500 font-medium">Date</th>
+                    <th className="text-right py-2 px-3 text-gray-500 font-medium">Value ({unit})</th>
+                    <th className="text-right py-2 px-3 text-gray-500 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...data].reverse().map((point, i) => {
+                    const isInRange = point.value >= normalRange.min && point.value <= normalRange.max
+                    return (
+                      <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-2 px-3 text-gray-900">{point.date}</td>
+                        <td className="py-2 px-3 text-right font-medium" style={{ color }}>
+                          {point.value}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            isInRange ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {isInRange ? 'Normal' : point.value < normalRange.min ? 'Low' : 'High'}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
