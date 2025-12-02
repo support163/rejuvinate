@@ -45,7 +45,27 @@ interface MetricHistoryData {
   normalRange: { min: number; max: number }
   data: HistoricalDataPoint[]
   color: string
+  milestones?: TreatmentMilestone[]
 }
+
+interface TreatmentMilestone {
+  date: string
+  medication: string
+  injectionType: 'IM' | 'SubQ'
+  dose: string
+  note?: string
+}
+
+// Treatment milestones for testosterone therapy
+const testosteroneMilestones: TreatmentMilestone[] = [
+  { date: 'Jan 2022', medication: 'Testosterone Cypionate', injectionType: 'IM', dose: '100mg/week', note: 'Initial TRT start' },
+  { date: 'Apr 2022', medication: 'Testosterone Cypionate', injectionType: 'IM', dose: '120mg/week', note: 'Dose increase' },
+  { date: 'Jul 2022', medication: 'Testosterone Cypionate', injectionType: 'IM', dose: '150mg/week', note: 'Dose optimization' },
+  { date: 'Jan 2023', medication: 'Testosterone Cypionate', injectionType: 'SubQ', dose: '150mg/week', note: 'Switched to SubQ' },
+  { date: 'Jul 2023', medication: 'Testosterone Cypionate', injectionType: 'SubQ', dose: '175mg/week', note: 'Dose adjustment' },
+  { date: 'Jan 2024', medication: 'Testosterone Cypionate', injectionType: 'SubQ', dose: '200mg/week', note: 'Maintenance dose' },
+  { date: 'Jul 2024', medication: 'Testosterone Enanthate', injectionType: 'SubQ', dose: '200mg/week', note: 'Changed to Enanthate' },
+]
 
 // Historical data for each metric
 const historicalData: Record<string, MetricHistoryData> = {
@@ -54,6 +74,7 @@ const historicalData: Record<string, MetricHistoryData> = {
     unit: 'ng/dL',
     normalRange: { min: 300, max: 1000 },
     color: '#3b82f6',
+    milestones: testosteroneMilestones,
     data: [
       { date: 'Jan 2022', value: 285 },
       { date: 'Apr 2022', value: 320 },
@@ -621,12 +642,14 @@ function HistoryModal({
   metricData: MetricHistoryData
   onClose: () => void
 }) {
-  const { data, title, unit, normalRange, color } = metricData
+  const { data, title, unit, normalRange, color, milestones } = metricData
+  const [showMilestones, setShowMilestones] = useState(true)
+  const [hoveredMilestone, setHoveredMilestone] = useState<number | null>(null)
 
   // Calculate chart dimensions
-  const chartHeight = 300
+  const chartHeight = 350
   const chartWidth = 800
-  const padding = { top: 40, right: 40, bottom: 60, left: 60 }
+  const padding = { top: 60, right: 40, bottom: 60, left: 60 }
   const graphWidth = chartWidth - padding.left - padding.right
   const graphHeight = chartHeight - padding.top - padding.bottom
 
@@ -658,6 +681,17 @@ function HistoryModal({
     ? lastValue < firstValue
     : lastValue > firstValue
 
+  // Find milestone positions on chart
+  const getMilestonePosition = (milestoneDate: string) => {
+    const index = data.findIndex(d => d.date === milestoneDate)
+    if (index === -1) return null
+    return {
+      x: xScale(index),
+      y: yScale(data[index].value),
+      index
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -667,9 +701,9 @@ function HistoryModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
           <div>
             <h2 className="text-2xl font-bold text-primary">{title} History</h2>
             <p className="text-sm text-gray-500">Historical lab results over time</p>
@@ -706,8 +740,28 @@ function HistoryModal({
             </div>
           </div>
 
+          {/* Milestones Toggle */}
+          {milestones && milestones.length > 0 && (
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Pill className="w-5 h-5 text-secondary" />
+                <span className="font-medium text-gray-700">Treatment Milestones</span>
+              </div>
+              <button
+                onClick={() => setShowMilestones(!showMilestones)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  showMilestones
+                    ? 'bg-secondary text-white'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                }`}
+              >
+                {showMilestones ? 'Hide Milestones' : 'Show Milestones'}
+              </button>
+            </div>
+          )}
+
           {/* Chart */}
-          <div className="bg-gray-50 rounded-xl p-4 overflow-x-auto">
+          <div className="bg-gray-50 rounded-xl p-4 overflow-x-auto relative">
             <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full min-w-[600px]">
               {/* Normal range band */}
               <rect
@@ -736,6 +790,25 @@ function HistoryModal({
                 strokeWidth="1"
                 strokeDasharray="4 4"
               />
+
+              {/* Milestone vertical lines */}
+              {showMilestones && milestones && milestones.map((milestone, i) => {
+                const pos = getMilestonePosition(milestone.date)
+                if (!pos) return null
+                return (
+                  <line
+                    key={`milestone-line-${i}`}
+                    x1={pos.x}
+                    x2={pos.x}
+                    y1={padding.top - 10}
+                    y2={chartHeight - padding.bottom}
+                    stroke="#f97316"
+                    strokeWidth="2"
+                    strokeDasharray="6 3"
+                    opacity={hoveredMilestone === i ? 1 : 0.5}
+                  />
+                )
+              })}
 
               {/* Y-axis */}
               <line
@@ -823,16 +896,116 @@ function HistoryModal({
                     strokeWidth="3"
                     className="hover:r-8 transition-all cursor-pointer"
                   />
-                  {/* Tooltip on hover would go here in a more complex implementation */}
                 </g>
               ))}
+
+              {/* Milestone markers (diamond icons) */}
+              {showMilestones && milestones && milestones.map((milestone, i) => {
+                const pos = getMilestonePosition(milestone.date)
+                if (!pos) return null
+                const isHovered = hoveredMilestone === i
+                return (
+                  <g
+                    key={`milestone-marker-${i}`}
+                    onMouseEnter={() => setHoveredMilestone(i)}
+                    onMouseLeave={() => setHoveredMilestone(null)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {/* Diamond marker at data point */}
+                    <polygon
+                      points={`${pos.x},${pos.y - 12} ${pos.x + 8},${pos.y} ${pos.x},${pos.y + 12} ${pos.x - 8},${pos.y}`}
+                      fill={isHovered ? '#f97316' : '#fb923c'}
+                      stroke="white"
+                      strokeWidth="2"
+                    />
+                    {/* Pill icon inside diamond */}
+                    <text
+                      x={pos.x}
+                      y={pos.y + 1}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="text-[8px] fill-white font-bold"
+                    >
+                      Rx
+                    </text>
+                    {/* Milestone label at top */}
+                    <rect
+                      x={pos.x - 50}
+                      y={padding.top - 40}
+                      width="100"
+                      height="24"
+                      rx="4"
+                      fill={isHovered ? '#f97316' : '#fb923c'}
+                      opacity={isHovered ? 1 : 0.8}
+                    />
+                    <text
+                      x={pos.x}
+                      y={padding.top - 25}
+                      textAnchor="middle"
+                      className="text-[10px] fill-white font-medium"
+                    >
+                      {milestone.dose}
+                    </text>
+                  </g>
+                )
+              })}
 
               {/* Legend */}
               <g transform={`translate(${chartWidth - padding.right - 120}, ${padding.top - 20})`}>
                 <rect x="0" y="0" width="12" height="12" fill="#22c55e" opacity="0.3" />
                 <text x="18" y="10" className="text-xs fill-gray-600">Normal Range</text>
               </g>
+              {showMilestones && milestones && milestones.length > 0 && (
+                <g transform={`translate(${chartWidth - padding.right - 120}, ${padding.top})`}>
+                  <polygon
+                    points="6,0 12,6 6,12 0,6"
+                    fill="#fb923c"
+                  />
+                  <text x="18" y="10" className="text-xs fill-gray-600">Treatment Change</text>
+                </g>
+              )}
             </svg>
+
+            {/* Floating tooltip for hovered milestone */}
+            {showMilestones && milestones && hoveredMilestone !== null && (
+              <div
+                className="absolute bg-gray-900 text-white rounded-lg p-4 shadow-xl z-20 min-w-[250px]"
+                style={{
+                  left: `${((getMilestonePosition(milestones[hoveredMilestone].date)?.x || 0) / chartWidth) * 100}%`,
+                  top: '120px',
+                  transform: 'translateX(-50%)'
+                }}
+              >
+                <div className="text-sm font-bold text-orange-400 mb-2">
+                  Treatment Change
+                </div>
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Date:</span>
+                    <span className="font-medium">{milestones[hoveredMilestone].date}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Medication:</span>
+                    <span className="font-medium">{milestones[hoveredMilestone].medication}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Injection Type:</span>
+                    <span className="font-medium">{milestones[hoveredMilestone].injectionType}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Dose:</span>
+                    <span className="font-medium text-orange-400">{milestones[hoveredMilestone].dose}</span>
+                  </div>
+                  {milestones[hoveredMilestone].note && (
+                    <div className="pt-2 border-t border-gray-700 text-gray-300 italic">
+                      {milestones[hoveredMilestone].note}
+                    </div>
+                  )}
+                </div>
+                {/* Arrow */}
+                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-gray-900"></div>
+              </div>
+            )}
           </div>
 
           {/* Data table */}
@@ -870,6 +1043,61 @@ function HistoryModal({
               </table>
             </div>
           </div>
+
+          {/* Treatment Timeline Section - Only shown for testosterone */}
+          {milestones && milestones.length > 0 && (
+            <div className="mt-6 border-t border-gray-200 pt-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+                <Pill className="w-4 h-4 text-orange-500" />
+                Treatment Timeline
+              </h3>
+              <div className="relative">
+                {/* Timeline line */}
+                <div className="absolute left-[11px] top-4 bottom-4 w-0.5 bg-orange-200"></div>
+
+                {/* Milestone items */}
+                <div className="space-y-4">
+                  {milestones.map((milestone, i) => (
+                    <div key={i} className="flex items-start gap-4 relative">
+                      {/* Timeline dot */}
+                      <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center z-10 flex-shrink-0">
+                        <div className="w-2 h-2 rounded-full bg-white"></div>
+                      </div>
+
+                      {/* Milestone content */}
+                      <div className="flex-1 bg-gradient-to-r from-orange-50 to-transparent rounded-lg p-4 border border-orange-100">
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <div>
+                            <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">
+                              {milestone.date}
+                            </span>
+                            <h4 className="font-semibold text-gray-900 mt-2">
+                              {milestone.medication}
+                            </h4>
+                            {milestone.note && (
+                              <p className="text-sm text-gray-600 mt-1">{milestone.note}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                              milestone.injectionType === 'IM'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {milestone.injectionType === 'IM' ? 'Intramuscular (IM)' : 'Subcutaneous (SubQ)'}
+                            </span>
+                            <span className="text-sm font-bold text-orange-600">
+                              {milestone.dose}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
