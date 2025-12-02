@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, ShoppingCart, User, Phone } from 'lucide-react'
+import { Menu, X, ShoppingCart, Phone } from 'lucide-react'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -65,17 +65,17 @@ export default function Header() {
           </div>
 
           {/* Right side actions */}
-          <div className="flex items-center gap-4">
-            <Link href="#appointments" className="hidden md:inline-block bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
-              Book Appointment
+          <div className="flex items-center gap-3">
+            <Link href="/signin" className="hidden md:inline-block text-white hover:text-secondary font-medium text-sm transition-colors">
+              Sign In
             </Link>
-            <Link href="#portal" className="p-2 hover:text-secondary transition-colors">
-              <User className="w-5 h-5" />
+            <Link href="/signup" className="hidden md:inline-block bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+              Sign Up
             </Link>
             <Link href="#cart" className="p-2 hover:text-secondary transition-colors relative">
               <ShoppingCart className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 bg-secondary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                $0.00
+                0
               </span>
             </Link>
 
@@ -103,13 +103,22 @@ export default function Header() {
                   {item.label}
                 </Link>
               ))}
-              <Link
-                href="#appointments"
-                className="bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors text-center"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Book Appointment
-              </Link>
+              <div className="flex gap-3 pt-2 border-t border-white/20">
+                <Link
+                  href="/signin"
+                  className="flex-1 text-center text-white border border-white/50 hover:bg-white/10 font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/signup"
+                  className="flex-1 text-center bg-secondary hover:bg-secondary-dark text-white font-semibold py-2 px-4 rounded-lg text-sm transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sign Up
+                </Link>
+              </div>
             </div>
           </div>
         )}
