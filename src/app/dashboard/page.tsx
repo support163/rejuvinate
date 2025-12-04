@@ -22,7 +22,13 @@ import {
   Trash2,
   Eye,
   X,
-  CheckCircle
+  CheckCircle,
+  Bot,
+  Send,
+  Sparkles,
+  User,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 
 interface MedicalRecord {
@@ -54,6 +60,26 @@ interface TreatmentMilestone {
   injectionType: 'IM' | 'SubQ'
   dose: string
   note?: string
+}
+
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
+
+// AI Chatbot responses based on keywords
+const aiResponses: Record<string, string> = {
+  testosterone: "Based on your latest labs, your testosterone level is at 685 ng/dL, which is within the optimal range (300-1000 ng/dL). Your levels have improved significantly since starting TRT in January 2022. Would you like me to explain more about your treatment progress?",
+  estrogen: "Your estrogen (E2) level is currently at 28 pg/mL, which is in the healthy range (10-40 pg/mL). This is important to monitor alongside testosterone therapy to maintain hormonal balance.",
+  thyroid: "Your TSH level is 2.1 mIU/L, which is excellent! This is well within the normal range of 0.4-4.0 mIU/L. Your thyroid function appears to be healthy.",
+  vitamin: "Your Vitamin D level is at 45 ng/mL, which is in the optimal range (30-100 ng/mL). Great job maintaining healthy vitamin D levels! Continue with your 5000 IU daily supplementation.",
+  appointment: "Your next appointment is a Follow-up Consultation with Dr. Sarah Johnson on December 15, 2025 at 10:00 AM. You also have lab work scheduled at Quest Diagnostics on December 22, 2025 at 8:30 AM.",
+  medication: "You're currently on three medications:\n• Testosterone Cypionate 200mg/week (refill by Dec 20)\n• Vitamin D3 5000 IU/day (refill by Jan 5)\n• DHEA 25mg/day (refill by Dec 28)\nWould you like me to help you request a refill?",
+  injection: "For your testosterone injections, you're currently using the subcutaneous (SubQ) method at 200mg/week. SubQ injections are typically easier to self-administer and may result in more stable hormone levels compared to intramuscular (IM) injections.",
+  side: "Common side effects of TRT to monitor include: acne, hair changes, mood fluctuations, and changes in red blood cell count. Your labs show everything is within normal ranges. If you're experiencing any specific symptoms, please let me know.",
+  default: "I'm your AI health assistant at Revitalized Health. I can help you understand your lab results, medications, appointments, and general questions about hormone optimization therapy. What would you like to know?"
 }
 
 // Treatment milestones for testosterone therapy
@@ -207,6 +233,20 @@ export default function Dashboard() {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Chatbot state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: "Hello! I'm your AI health assistant at Revitalized Health. I can help you understand your lab results, medications, appointments, and answer questions about your hormone optimization therapy. How can I help you today?",
+      timestamp: new Date()
+    }
+  ])
+  const [chatInput, setChatInput] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const [isChatExpanded, setIsChatExpanded] = useState(true)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/signin')
@@ -274,6 +314,83 @@ export default function Dashboard() {
     setMedicalRecords(prev => prev.filter(record => record.id !== id))
   }
 
+  // Chat functions
+  const getAIResponse = (message: string): string => {
+    const lowerMessage = message.toLowerCase()
+
+    // Check for keywords and return appropriate response
+    if (lowerMessage.includes('testosterone') || lowerMessage.includes('trt') || lowerMessage.includes('t level')) {
+      return aiResponses.testosterone
+    }
+    if (lowerMessage.includes('estrogen') || lowerMessage.includes('e2')) {
+      return aiResponses.estrogen
+    }
+    if (lowerMessage.includes('thyroid') || lowerMessage.includes('tsh')) {
+      return aiResponses.thyroid
+    }
+    if (lowerMessage.includes('vitamin') || lowerMessage.includes('vit d')) {
+      return aiResponses.vitamin
+    }
+    if (lowerMessage.includes('appointment') || lowerMessage.includes('schedule') || lowerMessage.includes('next visit')) {
+      return aiResponses.appointment
+    }
+    if (lowerMessage.includes('medication') || lowerMessage.includes('meds') || lowerMessage.includes('prescription') || lowerMessage.includes('refill')) {
+      return aiResponses.medication
+    }
+    if (lowerMessage.includes('injection') || lowerMessage.includes('shot') || lowerMessage.includes('subq') || lowerMessage.includes('im ')) {
+      return aiResponses.injection
+    }
+    if (lowerMessage.includes('side effect') || lowerMessage.includes('symptom')) {
+      return aiResponses.side
+    }
+    if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
+      return "Hello! How can I assist you with your health journey today? Feel free to ask about your lab results, medications, or upcoming appointments."
+    }
+    if (lowerMessage.includes('thank')) {
+      return "You're welcome! I'm here to help whenever you need assistance with your health questions. Is there anything else you'd like to know?"
+    }
+    if (lowerMessage.includes('lab') || lowerMessage.includes('result') || lowerMessage.includes('blood work')) {
+      return "Your latest lab results show:\n• Testosterone: 685 ng/dL (optimal)\n• Estrogen: 28 pg/mL (normal)\n• TSH: 2.1 mIU/L (normal)\n• Vitamin D: 45 ng/mL (optimal)\n\nAll your markers are within healthy ranges! Would you like more details on any specific metric?"
+    }
+
+    return aiResponses.default
+  }
+
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return
+
+    // Add user message
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: chatInput,
+      timestamp: new Date()
+    }
+
+    setChatMessages(prev => [...prev, userMessage])
+    setChatInput('')
+    setIsTyping(true)
+
+    // Simulate AI thinking delay
+    setTimeout(() => {
+      const aiResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: getAIResponse(chatInput),
+        timestamp: new Date()
+      }
+      setChatMessages(prev => [...prev, aiResponse])
+      setIsTyping(false)
+    }, 1000 + Math.random() * 1000)
+  }
+
+  // Scroll to bottom of chat when new messages are added
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }, [chatMessages, isTyping])
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pt-20">
@@ -288,32 +405,166 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-24 pb-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">
-              Welcome back, {user.firstName}!
-            </h1>
-            <p className="text-gray-600 mt-1">Here&apos;s your health overview</p>
-          </div>
-          <div className="flex items-center gap-3 mt-4 md:mt-0">
-            <button className="p-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow relative">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-secondary rounded-full"></span>
-            </button>
-            <button className="p-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-              <Settings className="w-5 h-5 text-gray-600" />
-            </button>
-            <button
-              onClick={signOut}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-gray-600 hover:text-red-500"
-            >
-              <LogOut className="w-5 h-5" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
+      <div className="flex max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 gap-6">
+        {/* AI Chatbot Sidebar - Left Side */}
+        <div className="hidden lg:block w-80 flex-shrink-0">
+          <div className="sticky top-28">
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+              {/* Chat Header */}
+              <div
+                className="bg-gradient-to-r from-secondary to-secondary-dark p-4 cursor-pointer"
+                onClick={() => setIsChatExpanded(!isChatExpanded)}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                      <Bot className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-white flex items-center gap-2">
+                        Health Assistant
+                        <Sparkles className="w-4 h-4" />
+                      </h3>
+                      <p className="text-xs text-white/70">Powered by AI</p>
+                    </div>
+                  </div>
+                  {isChatExpanded ? (
+                    <ChevronDown className="w-5 h-5 text-white" />
+                  ) : (
+                    <ChevronUp className="w-5 h-5 text-white" />
+                  )}
+                </div>
+              </div>
+
+              {/* Chat Body */}
+              {isChatExpanded && (
+                <>
+                  {/* Messages Container */}
+                  <div
+                    ref={chatContainerRef}
+                    className="h-[400px] overflow-y-auto p-4 space-y-4 bg-gray-50"
+                  >
+                    {chatMessages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                            message.role === 'user'
+                              ? 'bg-secondary text-white rounded-br-md'
+                              : 'bg-white shadow-sm border border-gray-100 rounded-bl-md'
+                          }`}
+                        >
+                          {message.role === 'assistant' && (
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-5 h-5 bg-secondary/10 rounded-full flex items-center justify-center">
+                                <Bot className="w-3 h-3 text-secondary" />
+                              </div>
+                              <span className="text-xs font-medium text-secondary">AI Assistant</span>
+                            </div>
+                          )}
+                          <p className={`text-sm whitespace-pre-line ${message.role === 'user' ? 'text-white' : 'text-gray-700'}`}>
+                            {message.content}
+                          </p>
+                          <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-white/60' : 'text-gray-400'}`}>
+                            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Typing Indicator */}
+                    {isTyping && (
+                      <div className="flex justify-start">
+                        <div className="bg-white shadow-sm border border-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 bg-secondary/10 rounded-full flex items-center justify-center">
+                              <Bot className="w-3 h-3 text-secondary" />
+                            </div>
+                            <div className="flex gap-1">
+                              <span className="w-2 h-2 bg-secondary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                              <span className="w-2 h-2 bg-secondary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                              <span className="w-2 h-2 bg-secondary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Suggestions */}
+                  <div className="px-4 py-2 border-t border-gray-100 bg-white">
+                    <p className="text-xs text-gray-500 mb-2">Quick questions:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['My labs', 'Medications', 'Appointments'].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          onClick={() => {
+                            setChatInput(suggestion)
+                            setTimeout(() => handleSendMessage(), 100)
+                          }}
+                          className="px-3 py-1 text-xs bg-gray-100 hover:bg-secondary/10 hover:text-secondary rounded-full transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Input Area */}
+                  <div className="p-4 border-t border-gray-100 bg-white">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Ask about your health..."
+                        className="flex-1 px-4 py-2 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
+                      />
+                      <button
+                        onClick={handleSendMessage}
+                        disabled={!chatInput.trim()}
+                        className="w-10 h-10 bg-secondary hover:bg-secondary-dark disabled:bg-gray-200 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors"
+                      >
+                        <Send className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Main Dashboard Content */}
+        <div className="flex-1 min-w-0">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-primary">
+                Welcome back, {user.firstName}!
+              </h1>
+              <p className="text-gray-600 mt-1">Here&apos;s your health overview</p>
+            </div>
+            <div className="flex items-center gap-3 mt-4 md:mt-0">
+              <button className="p-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow relative">
+                <Bell className="w-5 h-5 text-gray-600" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-secondary rounded-full"></span>
+              </button>
+              <button className="p-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow">
+                <Settings className="w-5 h-5 text-gray-600" />
+              </button>
+              <button
+                onClick={signOut}
+                className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-shadow text-gray-600 hover:text-red-500"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            </div>
+          </div>
 
         {/* Health Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -576,7 +827,18 @@ export default function Dashboard() {
             </Link>
           </div>
         </div>
+        </div>
+        {/* End Main Dashboard Content */}
       </div>
+
+      {/* Mobile Chat Button - Fixed at bottom right for smaller screens */}
+      <MobileChatButton
+        chatMessages={chatMessages}
+        chatInput={chatInput}
+        setChatInput={setChatInput}
+        isTyping={isTyping}
+        handleSendMessage={handleSendMessage}
+      />
     </div>
   )
 }
@@ -1116,5 +1378,168 @@ function QuickLink({ icon, label }: { icon: React.ReactNode; label: string }) {
       </div>
       <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-secondary transition-colors" />
     </Link>
+  )
+}
+
+// Mobile Chat Button Component for smaller screens
+function MobileChatButton({
+  chatMessages,
+  chatInput,
+  setChatInput,
+  isTyping,
+  handleSendMessage
+}: {
+  chatMessages: ChatMessage[]
+  chatInput: string
+  setChatInput: (value: string) => void
+  isTyping: boolean
+  handleSendMessage: () => void
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const chatContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
+    }
+  }, [chatMessages, isTyping, isOpen])
+
+  return (
+    <div className="lg:hidden">
+      {/* Floating Chat Button */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-secondary hover:bg-secondary-dark rounded-full shadow-lg flex items-center justify-center z-50 transition-all hover:scale-110"
+        >
+          <Bot className="w-7 h-7 text-white" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></span>
+        </button>
+      )}
+
+      {/* Mobile Chat Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setIsOpen(false)}
+          />
+
+          {/* Chat Panel */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl max-h-[80vh] flex flex-col animate-slide-up">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-secondary to-secondary-dark p-4 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                    <Bot className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white flex items-center gap-2">
+                      Health Assistant
+                      <Sparkles className="w-4 h-4" />
+                    </h3>
+                    <p className="text-xs text-white/70">Powered by AI</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div
+              ref={chatContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+              style={{ maxHeight: 'calc(80vh - 180px)' }}
+            >
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                      message.role === 'user'
+                        ? 'bg-secondary text-white rounded-br-md'
+                        : 'bg-white shadow-sm border border-gray-100 rounded-bl-md'
+                    }`}
+                  >
+                    {message.role === 'assistant' && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-5 h-5 bg-secondary/10 rounded-full flex items-center justify-center">
+                          <Bot className="w-3 h-3 text-secondary" />
+                        </div>
+                        <span className="text-xs font-medium text-secondary">AI Assistant</span>
+                      </div>
+                    )}
+                    <p className={`text-sm whitespace-pre-line ${message.role === 'user' ? 'text-white' : 'text-gray-700'}`}>
+                      {message.content}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white shadow-sm border border-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 bg-secondary/10 rounded-full flex items-center justify-center">
+                        <Bot className="w-3 h-3 text-secondary" />
+                      </div>
+                      <div className="flex gap-1">
+                        <span className="w-2 h-2 bg-secondary/40 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-2 h-2 bg-secondary/40 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                        <span className="w-2 h-2 bg-secondary/40 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="p-4 border-t border-gray-100 bg-white">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask about your health..."
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!chatInput.trim()}
+                  className="w-12 h-12 bg-secondary hover:bg-secondary-dark disabled:bg-gray-200 disabled:cursor-not-allowed rounded-full flex items-center justify-center transition-colors"
+                >
+                  <Send className="w-5 h-5 text-white" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+          }
+          to {
+            transform: translateY(0);
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out;
+        }
+      `}</style>
+    </div>
   )
 }
